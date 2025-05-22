@@ -1,7 +1,7 @@
 BINARY_NAME=dotter
 CMD_PATH=./cmd/dotter
 
-.PHONY: all build test test-integration lint format clean
+.PHONY: all build test test-integration lint format clean sandbox
 
 all: build
 
@@ -17,6 +17,13 @@ test:
 test-integration:
 	@echo "Running integration tests..."
 	@./tests/integration/test_apply_basic/run_test.sh
+
+sandbox:
+	@echo "Building and starting interactive dotter sandbox environment..."
+	@docker build -t dotter-integration-test -f Dockerfile .
+	@docker build -t dotter-sandbox -f Dockerfile.sandbox .
+	@echo "Starting sandbox container. Type 'exit' when done."
+	@docker run -it --rm dotter-sandbox
 
 lint:
 	@echo "Running linter (golangci-lint)..."
@@ -43,6 +50,7 @@ help:
 	@echo "  build       - Build the binary"
 	@echo "  test        - Run unit tests"
 	@echo "  test-integration - Run Docker-based integration tests"
+	@echo "  sandbox     - Start an interactive dotter sandbox environment"
 	@echo "  lint        - Run golangci-lint (requires it to be installed)"
 	@echo "  format      - Format code using goimports and gofmt"
 	@echo "  clean       - Remove built binary and clean Go cache"
