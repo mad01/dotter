@@ -1,0 +1,35 @@
+# Default configuration for dotter
+# For more information, see [project-link-here]
+
+dotfiles_repo_path = "~/.dotfiles" # Path to your dotfiles repository
+
+# Example: Manage .bashrc
+# [dotfiles.bashrc]
+# source = ".bashrc" # Relative to dotfiles_repo_path
+# target = "~/.bashrc"
+
+# Example: Manage nvim configuration
+# [dotfiles.nvim_config]
+# source = "nvim/init.vim" # Relative to dotfiles_repo_path
+# target = "~/.config/nvim/init.vim"
+
+# Example: Manage a tool like fzf
+# [[tools]]
+# name = "fzf"
+# check_command = "command -v fzf"
+# install_hint = "Install fzf from https://github.com/junegunn/fzf"
+# config_files = [
+#   { source = "fzf/.fzfrc", target = "~/.fzfrc" },
+# ]
+
+# Example: Shell aliases
+# [shell.aliases]
+# ll = "ls -alh"
+# k = "kubectl"
+
+# Example: Shell functions
+# [shell.functions.mygogreet]
+# body = '''
+# echo "Hello from a Go-managed shell function!"
+# echo "Arguments: $@"
+# ''' 
