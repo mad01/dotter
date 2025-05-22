@@ -51,6 +51,11 @@ dotfiles_repo_path = "." # Relative to this config file's location
   target = "~/.config/alacritty/alacritty.yml"
   is_template = true
 
+[dotfiles.kitty_config]
+  source = "kitty/kitty.conf"
+  target = "~/.config/kitty/kitty.conf"
+  is_template = true
+
 
 # --- Shell Configuration ---
 [shell]
