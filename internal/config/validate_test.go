@@ -85,3 +85,93 @@ func TestExpandPath(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateConfig_Valid(t *testing.T) {
+	cfg := &Config{
+		DotfilesRepoPath: "~/.dotfiles",
+		Dotfiles: map[string]Dotfile{
+			"bashrc": {Source: ".bashrc", Target: "~/.bashrc"},
+		},
+		Tools: []Tool{
+			{Name: "fzf", CheckCommand: "command -v fzf"},
+		},
+		Shell: ShellConfig{
+			Aliases:   map[string]string{"ll": "ls -alh"},
+			Functions: map[string]ShellFunction{"myfunc": {Body: "echo hello"}},
+		},
+	}
+	if err := ValidateConfig(cfg); err != nil {
+		t.Errorf("ValidateConfig() with valid config returned error: %v", err)
+	}
+}
+
+func TestValidateConfig_MissingDotfilesRepoPath(t *testing.T) {
+	cfg := &Config{}
+	if err := ValidateConfig(cfg); err == nil {
+		t.Error("ValidateConfig() with missing DotfilesRepoPath did not return an error")
+	} else {
+		t.Logf("Got expected error: %v", err) // Log error for visibility in test output
+	}
+}
+
+func TestValidateConfig_DotfileMissingSource(t *testing.T) {
+	cfg := &Config{
+		DotfilesRepoPath: "~/.dotfiles",
+		Dotfiles:         map[string]Dotfile{"missing_source": {Target: "~/.target"}},
+	}
+	if err := ValidateConfig(cfg); err == nil {
+		t.Error("ValidateConfig() with dotfile missing source did not return an error")
+	} else {
+		t.Logf("Got expected error: %v", err)
+	}
+}
+
+func TestValidateConfig_DotfileMissingTarget(t *testing.T) {
+	cfg := &Config{
+		DotfilesRepoPath: "~/.dotfiles",
+		Dotfiles:         map[string]Dotfile{"missing_target": {Source: ".source"}},
+	}
+	if err := ValidateConfig(cfg); err == nil {
+		t.Error("ValidateConfig() with dotfile missing target did not return an error")
+	} else {
+		t.Logf("Got expected error: %v", err)
+	}
+}
+
+func TestValidateConfig_ToolMissingName(t *testing.T) {
+	cfg := &Config{
+		DotfilesRepoPath: "~/.dotfiles",
+		Tools:            []Tool{{CheckCommand: "command -v tool"}},
+	}
+	if err := ValidateConfig(cfg); err == nil {
+		t.Error("ValidateConfig() with tool missing name did not return an error")
+	} else {
+		t.Logf("Got expected error: %v", err)
+	}
+}
+
+func TestValidateConfig_ToolMissingCheckCommand(t *testing.T) {
+	cfg := &Config{
+		DotfilesRepoPath: "~/.dotfiles",
+		Tools:            []Tool{{Name: "mytool"}},
+	}
+	if err := ValidateConfig(cfg); err == nil {
+		t.Error("ValidateConfig() with tool missing check_command did not return an error")
+	} else {
+		t.Logf("Got expected error: %v", err)
+	}
+}
+
+func TestValidateConfig_ShellFunctionMissingBody(t *testing.T) {
+	cfg := &Config{
+		DotfilesRepoPath: "~/.dotfiles",
+		Shell: ShellConfig{
+			Functions: map[string]ShellFunction{"badfunc": {Body: ""}},
+		},
+	}
+	if err := ValidateConfig(cfg); err == nil {
+		t.Error("ValidateConfig() with shell function missing body did not return an error")
+	} else {
+		t.Logf("Got expected error: %v", err)
+	}
+}

@@ -2,10 +2,11 @@ package commands
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
+	"github.com/fatih/color"
 	"github.com/mad01/dotter/internal/config"
 	"github.com/mad01/dotter/internal/dotfile"
 	"github.com/mad01/dotter/internal/shell"
@@ -26,24 +27,32 @@ var applyCmd = &cobra.Command{
 		fmt.Println("Applying dotter configurations...")
 
 		if dryRun {
-			fmt.Println("\n*** DRY RUN MODE ENABLED ***")
-			fmt.Println("No actual changes will be made.")
-			fmt.Println("****************************\n")
+			color.Cyan("\n*** DRY RUN MODE ENABLED ***")
+			color.Cyan("No actual changes will be made.")
+			color.Cyan("****************************\n")
 		}
 
 		cfg, err := config.LoadConfig()
 		if err != nil {
-			log.Fatalf("Error loading configuration: %v\n", err)
+			fmt.Fprintln(os.Stderr, color.RedString("Error loading configuration: %v", err))
+			os.Exit(1)
 		}
 
 		symlinkAction := dotfile.SymlinkActionBackup // Default action
 		if overwriteExisting {
 			symlinkAction = dotfile.SymlinkActionOverwrite
+			fmt.Println("Symlink action: Overwrite existing files.")
 		} else if skipExisting {
 			symlinkAction = dotfile.SymlinkActionSkip
+			fmt.Println("Symlink action: Skip existing files.")
+		} else {
+			fmt.Println("Symlink action: Backup existing files.")
 		}
 
-		fmt.Println("Processing dotfiles...")
+		fmt.Println("\nProcessing dotfiles...")
+		dotfilesApplied := 0
+		dotfilesSkippedOrFailed := 0
+
 		for name, df := range cfg.Dotfiles {
 			fmt.Printf("  Applying dotfile: %s (Source: %s, Target: %s)\n", name, df.Source, df.Target)
 
@@ -56,91 +65,85 @@ var applyCmd = &cobra.Command{
 
 			if df.IsTemplate {
 				fmt.Printf("    Processing as template: %s\n", df.Source)
+				var processedPath string
+				var templateErr error
 				if dryRun {
-					// WriteProcessedTemplateToFile will now print its own dry run message
-					processedPath, templateErr := dotfile.WriteProcessedTemplateToFile(currentSourcePath, cfg, templateData, true)
-					if templateErr != nil { // Still check for processing errors
-						log.Printf("    Error processing template (dry run) for %s: %v\n", name, templateErr)
-						continue
+					processedPath, templateErr = dotfile.WriteProcessedTemplateToFile(currentSourcePath, cfg, templateData, true)
+					if templateErr == nil && processedPath == "" { // dry run specific path
+						processedPath = "/tmp/fake_processed_template_for_dry_run" // ensure it has a value for dry run
 					}
-					dotfileToSymlink.Source = processedPath // Use the fake path for symlink dry run
-					repoPathForSymlink = ""
 				} else {
-					processedPath, templateErr := dotfile.WriteProcessedTemplateToFile(currentSourcePath, cfg, templateData, false)
-					if templateErr != nil {
-						log.Printf("    Error processing template for %s: %v\n", name, templateErr)
-						continue
-					}
-					dotfileToSymlink.Source = processedPath
-					repoPathForSymlink = ""
+					processedPath, templateErr = dotfile.WriteProcessedTemplateToFile(currentSourcePath, cfg, templateData, false)
 				}
+
+				if templateErr != nil {
+					fmt.Fprintln(os.Stderr, color.YellowString("    - Warning: Error processing template for %s: %v", name, templateErr))
+					dotfilesSkippedOrFailed++
+					continue
+				}
+				dotfileToSymlink.Source = processedPath
+				repoPathForSymlink = "" // Processed template is an absolute path
 			}
 
-			// Pass dryRun to CreateSymlink if it's adapted to handle it
-			// For now, CreateSymlink doesn't know about dryRun, so it will attempt FS operations.
-			// We gate the actual call here for dryRun.
-			if dryRun {
-				// CreateSymlink will now print its own dry run messages if called with dryRun=true
-				symlinkErr = dotfile.CreateSymlink(dotfileToSymlink, repoPathForSymlink, symlinkAction, true)
-			} else {
-				symlinkErr = dotfile.CreateSymlink(dotfileToSymlink, repoPathForSymlink, symlinkAction, false)
-			}
+			symlinkErr = dotfile.CreateSymlink(dotfileToSymlink, repoPathForSymlink, symlinkAction, dryRun)
 
-			// Cleanup for templated files, outside dry run (dryRun is false here implicitly by the outer if)
+			// Cleanup for templated files
 			if df.IsTemplate && repoPathForSymlink == "" && !dryRun && dotfileToSymlink.Source != "/tmp/fake_processed_template_for_dry_run" {
-				if removeErr := os.Remove(dotfileToSymlink.Source); removeErr != nil {
-					log.Printf("    Warning: failed to remove temporary processed file %s: %v\n", dotfileToSymlink.Source, removeErr)
+				// Check if the source is in a temp-like directory before removing
+				// This is a basic check; for more robust checks, consider if WriteProcessedTemplateToFile returns if it's a temp file.
+				if strings.HasPrefix(dotfileToSymlink.Source, os.TempDir()) || strings.Contains(dotfileToSymlink.Source, "dotter-temp-") {
+					if removeErr := os.Remove(dotfileToSymlink.Source); removeErr != nil {
+						fmt.Fprintln(os.Stderr, color.YellowString("    - Warning: failed to remove temporary processed file %s: %v", dotfileToSymlink.Source, removeErr))
+					} else {
+						// fmt.Printf("    Successfully removed temporary processed file %s\n", dotfileToSymlink.Source)
+					}
 				}
 			}
 
 			if symlinkErr != nil {
-				log.Printf("    Error applying dotfile %s: %v\n", name, symlinkErr)
+				fmt.Fprintln(os.Stderr, color.RedString("    - Error applying dotfile %s: %v", name, symlinkErr))
+				dotfilesSkippedOrFailed++
+			} else {
+				if !dryRun { // only count as applied if not dry run
+					dotfilesApplied++
+				}
 			}
 		}
+		if dryRun {
+			color.Cyan("  Dotfiles processing (dry run): Inspect messages above for intended actions.")
+		} else {
+			fmt.Printf("  Dotfiles processed: %s applied, %s skipped/failed.\n", color.GreenString("%d", dotfilesApplied), color.YellowString("%d", dotfilesSkippedOrFailed))
+		}
 
-		fmt.Println("Processing shell configurations...")
+		fmt.Println("\nProcessing shell configurations...")
 		currentShell := shell.AutoDetectShell()
 		if currentShell == "" {
-			log.Println("Could not auto-detect current shell. Skipping shell configuration.")
+			fmt.Fprintln(os.Stderr, color.YellowString("Could not auto-detect current shell. Skipping shell configuration."))
 		} else {
+			fmt.Printf("  Detected shell: %s\n", currentShell)
 			var aliasFile, funcFile string
 			var genErr error
-			if dryRun {
-				fmt.Printf("  [DRY RUN] Would generate shell config files for %s.\n", currentShell)
-				// Create dummy paths for sourcing logic in dry run
-				genDir, _ := shell.GetDotterGeneratedDir()
-				aliasFile = filepath.Join(genDir, shell.GeneratedAliasesFilename)
-				funcFile = filepath.Join(genDir, shell.GeneratedFunctionsFilename)
-				// GenerateShellConfigs will now print its own dry run messages
-				aliasFile, funcFile, genErr = shell.GenerateShellConfigs(cfg, currentShell, true)
-				// No actual files created, but paths are needed for subsequent dry run of InjectSourceLines
-			} else {
-				aliasFile, funcFile, genErr = shell.GenerateShellConfigs(cfg, currentShell, false)
-			}
+
+			aliasFile, funcFile, genErr = shell.GenerateShellConfigs(cfg, currentShell, dryRun)
 
 			if genErr != nil {
-				log.Printf("Error generating shell configs for %s: %v\n", currentShell, genErr)
+				fmt.Fprintln(os.Stderr, color.RedString("  Error generating shell configs for %s: %v", currentShell, genErr))
 			} else {
 				linesToSource := []string{}
-				if aliasFile != "" && (len(cfg.Shell.Aliases) > 0 || dryRun) { // check len for non-dry run
+				if aliasFile != "" && (len(cfg.Shell.Aliases) > 0 || (dryRun && aliasFile != "")) {
 					linesToSource = append(linesToSource, fmt.Sprintf("source %s", aliasFile))
 				}
-				if funcFile != "" && (len(cfg.Shell.Functions) > 0 || dryRun) {
+				if funcFile != "" && (len(cfg.Shell.Functions) > 0 || (dryRun && funcFile != "")) {
 					linesToSource = append(linesToSource, fmt.Sprintf("source %s", funcFile))
 				}
 
 				if len(linesToSource) > 0 {
-					if dryRun {
-						// InjectSourceLines will now print its own dry run messages
-						if err := shell.InjectSourceLines(currentShell, linesToSource, true); err != nil {
-							// Log error even in dry run if the dry run logic itself fails
-							log.Printf("Error during dry run of injecting source lines for %s: %v\n", currentShell, err)
-						}
-					} else {
-						if err := shell.InjectSourceLines(currentShell, linesToSource, false); err != nil {
-							log.Printf("Error injecting source lines into %s rc file: %v\n", currentShell, err)
-						}
+					fmt.Printf("  Injecting source lines into %s rc file...\n", currentShell)
+					if err := shell.InjectSourceLines(currentShell, linesToSource, dryRun); err != nil {
+						fmt.Fprintln(os.Stderr, color.RedString("  Error injecting source lines into %s rc file: %v", currentShell, err))
 					}
+				} else {
+					fmt.Println("  No shell aliases or functions configured to source.")
 				}
 			}
 		}
@@ -149,19 +152,25 @@ var applyCmd = &cobra.Command{
 		if len(cfg.Tools) > 0 {
 			fmt.Println("\nChecking tool configurations (installation not performed by apply):")
 			for _, t := range cfg.Tools {
+				var statusColor func(format string, a ...interface{}) string
 				status := "Not installed"
 				if tool.CheckStatus(t.CheckCommand) {
 					status = "Installed"
+					statusColor = color.GreenString
+				} else {
+					statusColor = color.YellowString
 				}
-				fmt.Printf("  - Tool '%s': %s. Install hint: %s\n", t.Name, status, t.InstallHint)
+				fmt.Printf("  - Tool '%s': %s. Install hint: %s\n", t.Name, statusColor(status), t.InstallHint)
 				// TODO: Process tool.ConfigFiles if any, similar to main dotfiles (symlinking, templating)
 				// This would need to respect dryRun as well.
 			}
 		}
 
-		fmt.Println("\nDotter apply complete.")
+		fmt.Println("") // Add a newline for spacing
 		if dryRun {
-			fmt.Println("DRY RUN: No changes were made.")
+			color.Cyan("DRY RUN: Dotter apply finished. No actual changes were made.")
+		} else {
+			color.Green("Dotter apply complete.")
 		}
 	},
 }

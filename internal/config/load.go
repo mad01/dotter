@@ -11,6 +11,12 @@ import (
 // DefaultConfigFileName is the expected name of the configuration file.
 const DefaultConfigFileName = "config.toml"
 
+var (
+	// GetDefaultConfigPath defines the function to get the default config path.
+	// This is a variable to allow for easier testing.
+	GetDefaultConfigPath = getDefaultConfigPathInternal
+)
+
 // LoadConfig attempts to load the dotter configuration from the default location.
 // Default location: $XDG_CONFIG_HOME/dotter/config.toml or ~/.config/dotter/config.toml.
 func LoadConfig() (*Config, error) {
@@ -35,15 +41,15 @@ func LoadConfig() (*Config, error) {
 	return &cfg, nil
 }
 
-// GetDefaultConfigPath returns the default path for the dotter configuration file.
-func GetDefaultConfigPath() (string, error) {
-	configHome := os.Getenv("XDG_CONFIG_HOME")
-	if configHome == "" {
+// getDefaultConfigPathInternal is the actual implementation for GetDefaultConfigPath.
+func getDefaultConfigPathInternal() (string, error) {
+	xdgConfigHome := os.Getenv("XDG_CONFIG_HOME")
+	if xdgConfigHome == "" {
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
 			return "", fmt.Errorf("could not get user home directory: %w", err)
 		}
-		configHome = filepath.Join(homeDir, ".config")
+		xdgConfigHome = filepath.Join(homeDir, ".config")
 	}
-	return filepath.Join(configHome, "dotter", DefaultConfigFileName), nil
+	return filepath.Join(xdgConfigHome, "dotter", DefaultConfigFileName), nil
 }

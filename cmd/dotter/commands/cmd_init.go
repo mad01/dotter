@@ -1,92 +1,131 @@
 package commands
 
 import (
-	"bytes" // For replacing content in embedded file
+	"bytes"
 	"fmt"
 
 	// "io/fs" // Unused import
-	"log"
+
 	"os"
 	"path/filepath"
 
 	// For replacing content
 	// For replacing content
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/fatih/color"
 	"github.com/mad01/dotter/internal/config"
 	"github.com/spf13/cobra"
 )
 
-//go:embed ../../configs/examples/default.config.toml
-var defaultConfigContentBytes []byte
+// Removing: //go:embed ../../configs/examples/default.config.toml
+// var defaultConfigContentBytes []byte
 
 var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Initialize dotter configuration",
 	Long:  `Initializes a new dotter configuration file and provides guidance on next steps.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Initializing dotter...")
+		color.Cyan("Initializing dotter...")
 
 		defaultConfigPath, err := config.GetDefaultConfigPath()
 		if err != nil {
-			log.Fatalf("Error: Could not determine default config path: %v", err)
+			fmt.Fprintln(os.Stderr, color.RedString("Error: Could not determine default config path: %v", err))
+			os.Exit(1)
 		}
 
-		// Check if config file already exists
 		if _, err := os.Stat(defaultConfigPath); err == nil {
+			color.Yellow("Configuration file already exists at %s.", defaultConfigPath)
 			overwrite := false
 			prompt := &survey.Confirm{
-				Message: fmt.Sprintf("Configuration file already exists at %s. Overwrite?", defaultConfigPath),
+				Message: "Overwrite?",
 			}
 			survey.AskOne(prompt, &overwrite)
 			if !overwrite {
-				fmt.Println("Initialization cancelled.")
+				color.Green("Initialization cancelled. Existing configuration preserved.")
 				return
 			}
+			color.Yellow("Existing configuration will be overwritten.")
 		} else if !os.IsNotExist(err) {
-			log.Fatalf("Error checking for config file at %s: %v", defaultConfigPath, err)
+			fmt.Fprintln(os.Stderr, color.RedString("Error checking for config file at %s: %v", defaultConfigPath, err))
+			os.Exit(1)
 		}
 
-		// Get dotfiles repository path from user
 		dotfilesRepoPathInput := ""
-		// Try to read the current value from the embedded config if it exists and is valid TOML
-		// This is a bit advanced; for now, we'll use a simpler default.
-		defaultRepoPathSuggestion, _ := config.ExpandPath("~/.dotfiles") // Suggest a default
-
+		defaultRepoPathSuggestion, _ := config.ExpandPath("~/.dotfiles") // Best effort for suggestion
 		promptRepo := &survey.Input{
-			Message: "Enter the path to your dotfiles source repository (e.g., ~/.dotfiles_src):",
+			Message: color.New(color.FgWhite, color.Bold).Sprint("Enter the path to your dotfiles source repository:"),
 			Default: defaultRepoPathSuggestion,
+			Help:    "This is where your actual dotfiles (e.g., .bashrc, .vimrc) are stored. Use ~ for home directory.",
 		}
-		survey.AskOne(promptRepo, &dotfilesRepoPathInput, survey.WithValidator(survey.Required))
+		err = survey.AskOne(promptRepo, &dotfilesRepoPathInput, survey.WithValidator(survey.Required))
+		if err != nil {
+			fmt.Fprintln(os.Stderr, color.RedString("Error during survey: %v", err))
+			os.Exit(1)
+		}
 
 		expandedRepoPath, err := config.ExpandPath(dotfilesRepoPathInput)
 		if err != nil {
-			log.Fatalf("Error expanding repository path '%s': %v", dotfilesRepoPathInput, err)
+			fmt.Fprintln(os.Stderr, color.RedString("Error expanding repository path '%s': %v", dotfilesRepoPathInput, err))
+			os.Exit(1)
 		}
+		fmt.Printf("Dotfiles repository path set to: %s\\n", color.GreenString(expandedRepoPath))
 
-		// Use embedded default config content and replace the dotfiles_repo_path
-		finalConfigContent := bytes.ReplaceAll(defaultConfigContentBytes,
-			[]byte("dotfiles_repo_path = \"~/.dotfiles\""), // The placeholder in the embedded file
-			[]byte(fmt.Sprintf("dotfiles_repo_path = \"%s\"", expandedRepoPath)),
-		)
+		var finalConfigContent []byte
+		defaultConfigFilePath := "configs/examples/default.config.toml"
+		templateBytes, err := os.ReadFile(defaultConfigFilePath)
+		if err != nil {
+			fmt.Fprintln(os.Stdout, color.YellowString("Warning: Could not read default config template from '%s' (%v). Using minimal hardcoded config.", defaultConfigFilePath, err))
+			hardcodedConfig := fmt.Sprintf("dotfiles_repo_path = \"%s\"\n\n"+
+				"# Example dotfile entry:\n"+
+				"# [dotfiles.bashrc]\n"+
+				"# source = \".bashrc\"\n"+
+				"# target = \"~/.bashrc\"\n"+
+				"# is_template = false\n\n"+
+				"# Example tool entry:\n"+
+				"# [[tools]]\n"+
+				"# name = \"fzf\"\n"+
+				"# check_command = \"command -v fzf\"\n"+
+				"# install_hint = \"Install fzf from https://github.com/junegunn/fzf\"\n\n"+
+				"# Example shell alias:\n"+
+				"# [shell.aliases]\n"+
+				"# ll = \"ls -alh\"\n\n"+
+				"# Example shell function (POSIX):\n"+
+				"# [shell.functions.myfunc]\n"+
+				"# body = \"\"\"\n"+
+				"# echo \\\"Hello from myfunc!\\\"\n"+
+				"# echo \\\"Arguments: $@\\\"\n"+
+				"# \"\"\"\n", expandedRepoPath)
+			finalConfigContent = []byte(hardcodedConfig)
+		} else {
+			// Replace the placeholder in the template file
+			placeholder := "dotfiles_repo_path = \"~/.dotfiles\"" // Must match placeholder in default.config.toml
+			replacement := fmt.Sprintf("dotfiles_repo_path = \"%s\"", expandedRepoPath)
+			finalConfigContent = bytes.ReplaceAll(templateBytes, []byte(placeholder), []byte(replacement))
+			fmt.Println("Using default configuration template.")
+		}
 
 		configDir := filepath.Dir(defaultConfigPath)
 		if err := os.MkdirAll(configDir, 0755); err != nil {
-			log.Fatalf("Error creating config directory %s: %v", configDir, err)
+			fmt.Fprintln(os.Stderr, color.RedString("Error creating config directory %s: %v", configDir, err))
+			os.Exit(1)
 		}
 
 		if err := os.WriteFile(defaultConfigPath, finalConfigContent, 0644); err != nil {
-			log.Fatalf("Error writing default configuration to %s: %v", defaultConfigPath, err)
+			fmt.Fprintln(os.Stderr, color.RedString("Error writing default configuration to %s: %v", defaultConfigPath, err))
+			os.Exit(1)
 		}
-		fmt.Printf("Default configuration file created at %s\n", defaultConfigPath)
+		color.Green("Default configuration file created at %s", defaultConfigPath)
 
-		fmt.Println("\nNext Steps:")
-		fmt.Printf("1. Populate your dotfiles repository at '%s'.\n", expandedRepoPath)
-		fmt.Printf("2. Customize your '%s' with the dotfiles, tools, and shell settings you want to manage.\n", defaultConfigPath)
-		fmt.Println("3. Run 'dotter apply' to apply your configurations.")
-		fmt.Println("\nImportant: It is highly recommended to commit your dotfiles source repository (and potentially this config file if you symlink it there) to version control (e.g., Git).")
-
-		fmt.Println("\nTip: Consider version controlling your dotter config file by placing it in your dotfiles repository and symlinking it to the default location.")
-
+		fmt.Println("\n" + color.New(color.FgCyan, color.Bold).Sprint("🎉 Next Steps:"))
+		fmt.Printf("1. %s your dotfiles repository at '%s'.\n", color.YellowString("Populate"), color.GreenString(expandedRepoPath))
+		fmt.Printf("2. %s your '%s' with the dotfiles, tools, and shell settings you want to manage.\n", color.YellowString("Customize"), color.GreenString(defaultConfigPath))
+		fmt.Printf("3. Run '%s' to apply your configurations.\n", color.YellowString("dotter apply"))
+		fmt.Println("\n" + color.New(color.FgWhite, color.Bold).Sprint("💡 Important:"))
+		fmt.Println("   It is highly recommended to commit your dotfiles source repository (and potentially")
+		fmt.Printf("   this config file if you symlink it there from '%s') to version control (e.g., Git).\n", color.GreenString(expandedRepoPath))
+		fmt.Println("\n" + color.New(color.FgWhite, color.Bold).Sprint("✨ Tip:"))
+		fmt.Printf("   Consider version controlling your dotter config file by placing it in '%s' \n   and symlinking '%s' to '%s'.\n",
+			color.GreenString(expandedRepoPath), color.GreenString(filepath.Join(expandedRepoPath, "your-dotter-config.toml")), color.GreenString(defaultConfigPath))
 	},
 }
 
@@ -94,29 +133,7 @@ func init() {
 	rootCmd.AddCommand(initCmd)
 }
 
-// Helper to read embedded or relative file - for future use if default.config.toml is properly packaged
-// This function is no longer needed as we are using go:embed directly for defaultConfigContentBytes
 /*
-func getDefaultConfigTemplateContent() ([]byte, error) {
-	// This is a placeholder. Ideally, use go:embed for the default config.
-	// For now, trying to read from a relative path that might not always work.
-	// A more robust solution for development could be to find it relative to this source file.
-	// For release, go:embed is the way.
-	// relPath := "../../configs/examples/default.config.toml" // Path relative to this file - Unused
-	// To make this slightly more robust for now, try to get CWD and build path from there
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil, fmt.Errorf("could not get current working directory: %w", err)
-	}
-	// This assumes `configs` is at the project root where `go run` or the binary might be executed.
-	// This is fragile.
-	absPath := filepath.Join(cwd, "configs", "examples", "default.config.toml")
-	fmt.Printf("Attempting to load default config template from: %s\n", absPath) // Debugging line
-
-	content, err := os.ReadFile(absPath)
-	if err != nil {
-		return nil, fmt.Errorf("could not read default config template at '%s' (ensure it exists or use go:embed): %w", absPath, err)
-	}
-	return content, nil
-}
+// This function is no longer needed with the direct read/fallback approach
+func getDefaultConfigTemplateContent() ([]byte, error) { ... }
 */
