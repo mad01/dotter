@@ -1,70 +1,13 @@
 FROM dotter-integration-test
 
-# Switch to root for setup
 USER root
 
-# Create a sample dotfiles repository with some example files
-RUN mkdir -p /sandbox/dotfiles_repo && \
-    echo 'export PS1="\\033[1;32m[dotter-sandbox]\\033[0m \\w $ "' > /sandbox/dotfiles_repo/.bashrc && \
-    echo 'set -g default-terminal "screen-256color"' > /sandbox/dotfiles_repo/.tmux.conf && \
-    echo 'syntax on\nset number\nset tabstop=4\ncolorscheme desert' > /sandbox/dotfiles_repo/.vimrc && \
-    echo 'alias ll="ls -alh"' > /sandbox/dotfiles_repo/.aliases && \
-    chmod -R 755 /sandbox
+# Create a sample dotfiles repository and hook scripts
+COPY scripts/prepare_sandbox.sh /tmp/prepare_sandbox.sh
+RUN chmod +x /tmp/prepare_sandbox.sh && /tmp/prepare_sandbox.sh
 
-# Create a sample dotter config.toml
-RUN mkdir -p /sandbox/dotter && \
-    cat > /sandbox/dotter/config.toml << 'EOF'
-dotfiles_repo_path = "/sandbox/dotfiles_repo"
-
-[dotfiles.bashrc]
-source = ".bashrc"
-target = "~/.bashrc"
-
-[dotfiles.vimrc]
-source = ".vimrc"
-target = "~/.vimrc"
-
-[dotfiles.tmux]
-source = ".tmux.conf"
-target = "~/.tmux.conf"
-
-[shell.aliases]
-ll = "ls -alh"
-la = "ls -A"
-l = "ls -CF"
-
-[shell.functions.dotter_help]
-body = '''
-echo "Welcome to the dotter sandbox!"
-echo "Try these commands:"
-echo "  dotter apply - Apply your dotfile configurations"
-echo "  dotter list - List managed dotfiles and their status"
-echo "  dotter doctor - Check the health of your dotter setup"
-echo "  vim /sandbox/dotter/config.toml - Edit your dotter config"
-'''
-EOF
-
-# Create a setup script for the sandbox
-RUN echo '#!/bin/bash\n\
-mkdir -p ~/.config/dotter\n\
-cp /sandbox/dotter/config.toml ~/.config/dotter/\n\
-echo "Welcome to the dotter sandbox!"\n\
-echo "Your dotfiles repo is at: /sandbox/dotfiles_repo"\n\
-echo "Your dotter config is at: ~/.config/dotter/config.toml"\n\
-echo ""\n\
-echo "Try these commands:"\n\
-echo "  dotter apply   - Apply your dotfile configurations"\n\
-echo "  dotter list    - List managed dotfiles and their status"\n\
-echo "  dotter doctor  - Check the health of your dotter setup"\n\
-echo "  cd /sandbox    - Explore the sandbox environment"\n\
-echo ""\n\
-echo "Changes within this container will be lost when you exit (due to --rm)."\n\
-exec bash\n\
-' > /sandbox/setup.sh && chmod +x /sandbox/setup.sh
-
-# Switch back to testuser
 USER testuser
 WORKDIR /home/testuser
 
-# Use bash as the entrypoint
-ENTRYPOINT ["/sandbox/setup.sh"] 
+# Overriding the entrypoint to use the setup.sh script
+ENTRYPOINT ["/bin/bash", "/sandbox/setup.sh"] 

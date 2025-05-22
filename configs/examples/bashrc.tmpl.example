@@ -1,0 +1,89 @@
+# Example Bash configuration template for dotter
+#
+# This file demonstrates how to use Go templating in your bash configuration
+# Place this in your dotfiles repository and reference it in your config.toml:
+#
+# [dotfiles.bashrc]
+# source = "bashrc.tmpl"
+# target = "~/.bashrc" 
+# is_template = true
+#
+# Then define your template variables in config.toml:
+#
+# [template_variables]
+# ps1_color = "green"
+# enable_history_expansion = true
+# custom_paths = ["~/bin", "~/.local/bin", "~/go/bin"]
+
+# .bashrc
+
+# Source global definitions
+if [ -f /etc/bashrc ]; then
+    . /etc/bashrc
+fi
+
+# User specific environment
+{{ range $path := .custom_paths }}
+if [ -d {{ $path }} ] ; then
+    PATH={{ $path }}:$PATH
+fi
+{{ end }}
+
+# Prompt customization
+{{ if eq .ps1_color "green" }}
+PS1="\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ "
+{{ else if eq .ps1_color "red" }}
+PS1="\[\033[01;31m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ "
+{{ else }}
+PS1="\u@\h:\w\$ "
+{{ end }}
+
+# History settings
+{{ if .enable_history_expansion }}
+set -o histexpand
+{{ else }}
+set +o histexpand
+{{ end }}
+
+HISTSIZE=1000
+HISTFILESIZE=2000
+HISTCONTROL=ignoreboth
+shopt -s histappend
+
+# Enable color support
+if [ -x /usr/bin/dircolors ]; then
+    test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
+    alias ls='ls --color=auto'
+    alias grep='grep --color=auto'
+    alias fgrep='fgrep --color=auto'
+    alias egrep='egrep --color=auto'
+fi
+
+# Environment-specific configuration
+{{ if eq (env "HOSTNAME") "work-laptop" }}
+# Work-specific settings
+export http_proxy="http://proxy.company.com:8080"
+export https_proxy="http://proxy.company.com:8080"
+export no_proxy="localhost,127.0.0.1,.company.com"
+{{ end }}
+
+# OS-specific configuration
+{{ if eq (env "OS") "Darwin" }}
+# macOS specific settings
+export CLICOLOR=1
+export LSCOLORS=ExFxBxDxCxegedabagacad
+alias ls='ls -G'
+{{ else }}
+# Linux specific settings (already set above)
+{{ end }}
+
+# Load additional configuration files
+if [ -d ~/.bashrc.d ]; then
+    for file in ~/.bashrc.d/*.sh; do
+        [ -r "$file" ] && source "$file"
+    done
+    unset file
+fi
+
+# Custom welcome message
+echo "Welcome back, $(whoami)! Today is $(date +%A), $(date +%B) $(date +%d), $(date +%Y)" 

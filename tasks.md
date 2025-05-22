@@ -207,7 +207,11 @@ This task list outlines the steps to build your Go-based CLI tool, `dotter`, for
 * [x] **Configuration over Code:** Emphasize defining behavior through the `config.toml` file.
 * [ ] **Speed & Efficiency:** Keep performance in mind, especially for any part of `dotter` that might be involved in shell startup (e.g., sourcing generated files). (Ongoing consideration)
 * [x] **Clear Diagnostics:** When things go wrong, provide helpful, actionable error messages (the `dotter doctor` command is key here).
-* [ ] **Extensibility (Future):** Think about how users might eventually be able to add their own "plugin" behaviors (though this is likely beyond the initial scope).
+* [x] **Extensibility (Future):** Think about how users might eventually be able to add their own "plugin" behaviors (though this is likely beyond the initial scope).
+  * [x] **Lifecycle Hook System:** Implement a hooks system that allows users to run custom scripts at key points in the dotter lifecycle.
+  * [ ] **Custom Template Functions:** Extend the templating system to allow users to register custom template functions.
+  * [ ] **Platform-Specific Configurations:** Allow users to define platform-specific variations of dotfiles.
+  * [ ] **Plugin System:** Design a more formal plugin system where Go packages can extend dotter's functionality.
 
 ---
 ## New TODOs / Refinements:
@@ -228,6 +232,14 @@ This task list outlines the steps to build your Go-based CLI tool, `dotter`, for
 *   [ ] **`dotter add tool` Implementation:** Flesh out the `dotter add tool <tool_name>` command.
 *   [ ] **CONTRIBUTING.md:** Create if project aims for external contributions.
 *   [ ] **LICENSE file:** Add a license file (e.g., MIT).
+*   [ ] **Further Extensibility Features:**
+    * [ ] **Enhanced Hook System:** Add more hook points (e.g., pre/post shell config, pre/post tool check).
+    * [ ] **Custom Template Functions:** Allow users to define shell scripts that can be called as functions within templates.
+    * [ ] **Platform Detection & Conditional Configurations:** Add OS/platform detection to enable conditional dotfile handling.
+    * [ ] **Remote Scripts Support:** Add capability to download and execute remote hook scripts (with appropriate security measures).
+    * [ ] **Hook Timeouts and Error Handling:** Implement timeout and retry mechanisms for hooks.
+*   [ ] **Sandbox Environment Updates:** Extend the sandbox environment to include examples of the hook system in action.
+*   [ ] **Documentation for Hooks:** Add comprehensive documentation for the hook system with examples.
 ---
 
 This list is quite detailed to give you a good starting point. Remember to break these down into smaller, manageable tasks as you go. Good luck with building `dotter`!

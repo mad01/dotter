@@ -106,6 +106,105 @@ If `is_template = true` for a dotfile, it will be processed using Go's `text/tem
 - Environment variables: `{{ env "USER" }}`
 - Configuration values: `{{ .DotterConfig.DotfilesRepoPath }}` (accesses the main `Config` struct)
 
+#### Go Template Syntax and Features
+
+Dotter leverages Go's powerful templating system, which supports:
+
+**Basic Syntax:**
+```
+{{ .Variable }}           # Access a variable 
+{{ env "ENV_VAR_NAME" }}  # Access environment variable
+{{ if .Condition }}       # Conditional logic
+  Content if true
+{{ else }}
+  Content if false
+{{ end }}
+```
+
+**Accessing Config Variables:**
+
+Template variables defined in your config.toml are directly accessible:
+```toml
+# In your config.toml
+[template_variables]
+username = "myuser"
+email = "user@example.com"
+```
+
+```
+# In your template file
+Git user: {{ .username }}
+Git email: {{ .email }}
+```
+
+**Available Variables in Templates:**
+
+- `.DotterConfig`: Access to the full dotter configuration
+  - `.DotterConfig.DotfilesRepoPath`: Path to your dotfiles repository
+  - `.DotterConfig.TemplateVariables`: Map of template variables
+- Environment variables via the `env` function: `{{ env "HOME" }}`
+- All keys from `template_variables` section of your config.toml
+
+**Conditional Configuration Example:**
+
+```
+# Set different configurations based on OS or hostname
+{{ if eq (env "HOSTNAME") "work-laptop" }}
+export PROXY="http://work-proxy:8080"
+{{ else }}
+# No proxy for home computer
+{{ end }}
+
+{{ if eq (env "OS") "Darwin" }}
+# macOS specific settings
+alias ls="ls -G"
+{{ else }}
+# Linux specific settings
+alias ls="ls --color=auto"
+{{ end }}
+```
+
+**Iteration Example:**
+
+```
+# Generate configurations for multiple directories
+{{ range $dir := .directories }}
+mkdir -p ~/{{ $dir }}
+{{ end }}
+```
+
+#### Advanced Template Features
+
+Dotter templates support all standard Go template features, including:
+
+- **Functions:** `eq`, `ne`, `lt`, `gt`, `and`, `or`, `not`
+- **Pipelines:** `{{ env "HOME" | printf "%s/.local" }}`
+- **Comments:** `{{/* This is a comment */}}`
+- **Whitespace Control:** `{{- .Variable -}}` trims whitespace before/after
+
+#### Template Example: Dynamic Git Configuration
+
+```
+# ~/.dotfiles/.gitconfig.tmpl
+[user]
+    name = {{ .git_name }}
+    email = {{ .git_email }}
+
+[core]
+    editor = {{ .editor | default "vim" }}
+    
+{{ if eq (env "HOSTNAME") "work-laptop" }}
+[user]
+    # Override email for work machine
+    email = {{ .work_email }}
+    
+[http]
+    proxy = {{ .work_proxy }}
+{{ end }}
+```
+
+With this template, you can define different Git configurations based on your machine, controlled by your `config.toml`.
+
 ## Usage
 
 - `dotter init`: Guides you through creating an initial `config.toml`.

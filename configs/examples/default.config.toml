@@ -22,6 +22,16 @@ dotfiles_repo_path = "~/.dotfiles" # Path to your dotfiles repository
 #   { source = "fzf/.fzfrc", target = "~/.fzfrc" },
 # ]
 
+# Example: Template variables
+# Variables defined here are available in templates with {{ .varname }}
+# [template_variables]
+# git_name = "Your Name"
+# git_email = "your.email@example.com"
+# editor = "vim"
+# ps1_color = "green"
+# enable_history_expansion = true
+# custom_paths = ["~/bin", "~/.local/bin", "~/go/bin"]
+
 # Example: Shell aliases
 # [shell.aliases]
 # ll = "ls -alh"
@@ -32,4 +42,32 @@ dotfiles_repo_path = "~/.dotfiles" # Path to your dotfiles repository
 # body = '''
 # echo "Hello from a Go-managed shell function!"
 # echo "Arguments: $@"
-# ''' 
+# '''
+
+# Example: Hooks for extending dotter functionality
+# [hooks]
+# # Hooks to run before any dotfiles are processed
+# pre_apply = [
+#   "echo 'Starting dotfile application process'",
+#   "~/dotfiles/scripts/backup-dotfiles.sh",
+# ]
+# 
+# # Hooks to run after all dotfiles are processed
+# post_apply = [
+#   "echo 'All dotfiles have been processed'",
+#   "~/dotfiles/scripts/notify-completion.sh",
+# ]
+# 
+# # Hooks to run before specific dotfiles are linked
+# [hooks.pre_link]
+# # Before linking nvim_config
+# nvim_config = [
+#   "mkdir -p ~/.config/nvim",
+# ]
+# 
+# # Hooks to run after specific dotfiles are linked
+# [hooks.post_link]
+# # After linking bashrc
+# bashrc = [
+#   "source ~/.bashrc",
+# ] 

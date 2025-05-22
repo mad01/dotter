@@ -1,0 +1,156 @@
+# Global .gitignore file, managed by dotter.
+# These patterns will be ignored in all your Git repositories.
+
+# Compiled source #
+###################
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+
+# Packages #
+############
+# Synology
+# Note: Specify the exact filename if it is not a pattern
+# /@eaDir/
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Thumbnails
+._*
+Thumbs.db
+
+# Files that might appear on external disks
+.Spotlight-V100
+.Trashes
+
+# Optional: IDE/Editor specific files #
+####################################
+
+# VS Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# JetBrains IDEs (IntelliJ, PyCharm, WebStorm, etc.)
+.idea/
+*.iml
+
+# Vim / Neovim
+*.swp
+*.swo
+*~
+*.stackdump
+# undo files - often managed in a central location via init.vim, but good to ignore globally too
+# if you don't centralize them or they might end up in projects.
+# .nvimlog
+# .netrwhist
+
+# Emacs
+*#
+.#*
+
+# macOS #
+#########
+.DS_Store
+.AppleDouble
+.LSOverride
+.Spotlight-V100
+.Trashes
+__MACOSX
+
+# Operating System Files #
+##########################
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+.Trash-*/
+
+# Python #
+##########
+*.pyc
+*.pyo
+__pycache__/
+.Python
+build/
+dist/
+develop-eggs/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+*.manifest
+*.spec
+
+# Python Virtual Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Node.js #
+###########
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json # Often committed, but can be ignored globally if preferred
+yarn.lock         # Same as package-lock.json
+
+# Go #
+######
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+# Binaries built by 'go build'
+# Add your project's binary name here if it's generic, e.g., 'app' or 'main'
+# For dotter itself, this is handled by .gitignore in the project root.
+
+# Terraform #
+#############
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+crash.log
+*.tfvars
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Logs and Databases #
+######################
+*.log
+*.sql
+*.sqlite
+
+# Credentials / Secrets (SHOULD NOT BE IN GIT ANYWAY!) #
+#######################################################
+*.env
+.env.*
+!.env.example
+credentials.*
+secrets.*
+*.pem
+*.key
+*.secret
+
+# Cloud specific #
+##################
+.serverless/
+.aws/
+.direnv/ 

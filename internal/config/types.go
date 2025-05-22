@@ -8,6 +8,7 @@ type Config struct {
 	Tools             []Tool                 `toml:"tools"`
 	Shell             ShellConfig            `toml:"shell"`
 	TemplateVariables map[string]interface{} `toml:"template_variables"`
+	Hooks             HooksConfig            `toml:"hooks"`
 }
 
 // Dotfile represents a single dotfile to be managed.
@@ -36,4 +37,12 @@ type ShellConfig struct {
 // The map key in ShellConfig.Functions will be the function name.
 type ShellFunction struct {
 	Body string `toml:"body"` // The actual shell script for the function body
+}
+
+// HooksConfig holds configuration for various lifecycle hooks
+type HooksConfig struct {
+	PreApply  []string            `toml:"pre_apply"`  // Hooks to run before applying any dotfiles
+	PostApply []string            `toml:"post_apply"` // Hooks to run after applying all dotfiles
+	PreLink   map[string][]string `toml:"pre_link"`   // Hooks to run before linking a specific dotfile
+	PostLink  map[string][]string `toml:"post_link"`  // Hooks to run after linking a specific dotfile
 }

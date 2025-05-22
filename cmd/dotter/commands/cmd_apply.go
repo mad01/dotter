@@ -9,6 +9,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/mad01/dotter/internal/config"
 	"github.com/mad01/dotter/internal/dotfile"
+	"github.com/mad01/dotter/internal/hooks"
 	"github.com/mad01/dotter/internal/shell"
 	"github.com/mad01/dotter/internal/tool"
 	"github.com/spf13/cobra"
@@ -49,12 +50,38 @@ var applyCmd = &cobra.Command{
 			fmt.Println("Symlink action: Backup existing files.")
 		}
 
+		// Execute pre-apply hooks
+		if len(cfg.Hooks.PreApply) > 0 {
+			preContext := &hooks.HookContext{
+				DryRun: dryRun,
+			}
+			if err := hooks.RunHooks(cfg.Hooks.PreApply, hooks.PreApply, preContext, dryRun); err != nil {
+				fmt.Fprintln(os.Stderr, color.RedString("Error executing pre-apply hooks: %v", err))
+				os.Exit(1)
+			}
+		}
+
 		fmt.Println("\nProcessing dotfiles...")
 		dotfilesApplied := 0
 		dotfilesSkippedOrFailed := 0
 
 		for name, df := range cfg.Dotfiles {
 			fmt.Printf("  Applying dotfile: %s (Source: %s, Target: %s)\n", name, df.Source, df.Target)
+
+			// Execute pre-link hooks for this specific dotfile
+			if preHooks, exists := cfg.Hooks.PreLink[name]; exists && len(preHooks) > 0 {
+				linkContext := &hooks.HookContext{
+					DotfileName: name,
+					SourcePath:  filepath.Join(cfg.DotfilesRepoPath, df.Source),
+					TargetPath:  df.Target,
+					DryRun:      dryRun,
+				}
+				if err := hooks.RunHooks(preHooks, hooks.PreLink, linkContext, dryRun); err != nil {
+					fmt.Fprintln(os.Stderr, color.RedString("Error executing pre-link hooks for %s: %v", name, err))
+					dotfilesSkippedOrFailed++
+					continue
+				}
+			}
 
 			templateData := make(map[string]interface{})
 
@@ -106,6 +133,19 @@ var applyCmd = &cobra.Command{
 			} else {
 				if !dryRun { // only count as applied if not dry run
 					dotfilesApplied++
+				}
+
+				// Execute post-link hooks for this specific dotfile if symlink was created successfully
+				if postHooks, exists := cfg.Hooks.PostLink[name]; exists && len(postHooks) > 0 {
+					linkContext := &hooks.HookContext{
+						DotfileName: name,
+						SourcePath:  filepath.Join(cfg.DotfilesRepoPath, df.Source),
+						TargetPath:  df.Target,
+						DryRun:      dryRun,
+					}
+					if err := hooks.RunHooks(postHooks, hooks.PostLink, linkContext, dryRun); err != nil {
+						fmt.Fprintln(os.Stderr, color.YellowString("Warning: post-link hook for %s failed: %v", name, err))
+					}
 				}
 			}
 		}
@@ -163,6 +203,16 @@ var applyCmd = &cobra.Command{
 				fmt.Printf("  - Tool '%s': %s. Install hint: %s\n", t.Name, statusColor(status), t.InstallHint)
 				// TODO: Process tool.ConfigFiles if any, similar to main dotfiles (symlinking, templating)
 				// This would need to respect dryRun as well.
+			}
+		}
+
+		// Execute post-apply hooks
+		if len(cfg.Hooks.PostApply) > 0 {
+			postContext := &hooks.HookContext{
+				DryRun: dryRun,
+			}
+			if err := hooks.RunHooks(cfg.Hooks.PostApply, hooks.PostApply, postContext, dryRun); err != nil {
+				fmt.Fprintln(os.Stderr, color.YellowString("Warning: post-apply hooks failed: %v", err))
 			}
 		}
 

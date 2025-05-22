@@ -1,0 +1,86 @@
+# ~/.gitconfig - Git configuration file
+# This is a templated file managed by dotter.
+
+[user]
+    name = {{ .name | default "Your Name" }}
+    email = {{ .email | default "your.email@example.com" }}
+    {{- if .signing_key }}
+    signingkey = {{ .signing_key }}
+    {{- end }}
+
+[core]
+    editor = {{ .editor | default "vim" }}
+    excludesfile = ~/.gitignore_global
+    autocrlf = input # Convert CRLF to LF on commit, LF to CRLF on checkout (Windows)
+                     # Use 'false' on Linux/macOS if you handle line endings manually
+                     # Use 'true' on Windows if you want Git to handle all conversions
+    pager = delta    # Requires 'git-delta' to be installed
+
+[init]
+    defaultBranch = main
+
+[alias]
+    st = status -sb
+    co = checkout
+    ci = commit
+    br = branch
+    unstage = reset HEAD --
+    lg = log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit
+    last = log -1 HEAD
+    serve = daemon --verbose --export-all --base-path=.git --reuseaddr --strict-paths .git/
+    # Show ignored files: git status --ignored
+    # Remove file from tracking: git rm --cached <file>
+
+[color]
+    ui = auto
+
+[push]
+    default = current # Push the current branch to a branch of the same name
+    # autoSetupRemote = true # Automatically set up tracking for new branches (Git 2.37+)
+
+[pull]
+    rebase = false # Prefer merge commits over rebase for pull (can be set to true or interactive)
+    # ff = only   # Only fast-forward, otherwise fail
+
+[fetch]
+    prune = true # Remove remote-tracking branches that no longer exist on the remote
+
+[diff]
+    tool = vimdiff
+    guitool = meld
+    algorithm = histogram
+    # Use delta for diffs if available
+    # pager = delta --plus-color="#012800" --minus-color="#340001" --syntax-theme="Monokai Extended"
+
+[difftool "vimdiff"]
+    cmd = nvim -d "$LOCAL" "$REMOTE"
+
+[difftool "meld"]
+    cmd = meld "$LOCAL" "$REMOTE"
+
+[merge]
+    tool = vimdiff
+    conflictstyle = diff3 # Show base, local, and remote versions in conflict markers
+
+[mergetool "vimdiff"]
+    cmd = nvim -d "$LOCAL" "$BASE" "$REMOTE" -c 'wincmd J' -c 'set modifiable' -c 'wincmd L'
+    trustExitCode = true
+
+# GPG Signing (if signing_key is set in template_variables)
+{{- if .signing_key }}
+[commit]
+    gpgsign = true
+[tag]
+    gpgsign = true
+{{- end }}
+
+# Include per-repository or conditional configurations
+# For example, use a different email for work projects:
+# [includeIf "gitdir:~/work/"]
+# path = ~/.gitconfig-work
+
+# To create ~/.gitconfig-work:
+# [user]
+#   email = your.work.email@company.com
+
+# --- End of Git Configuration --- 

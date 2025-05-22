@@ -1,0 +1,60 @@
+# Example Git configuration template for dotter
+# 
+# This file demonstrates how to use Go templating in your dotfiles
+# Place this in your dotfiles repository and reference it in your config.toml:
+#
+# [dotfiles.gitconfig]
+# source = "gitconfig.tmpl"
+# target = "~/.gitconfig" 
+# is_template = true
+#
+# Then define your template variables in config.toml:
+#
+# [template_variables]
+# git_name = "Your Name"
+# git_email = "your.email@example.com"
+# work_email = "your.work@company.com"
+# editor = "vim"
+
+[user]
+    name = {{ .git_name }}
+    email = {{ .git_email }}
+
+[core]
+    editor = {{ .editor | default "vim" }}
+    excludesfile = {{ env "HOME" }}/.gitignore_global
+    autocrlf = input
+
+# Conditional configuration based on hostname/environment
+{{ if eq (env "HOSTNAME") "work-laptop" }}
+[user]
+    # Override email for work machine
+    email = {{ .work_email }}
+    
+[http]
+    proxy = {{ .work_proxy | default "http://proxy.company.com:8080" }}
+{{ end }}
+
+# Different configuration based on OS
+{{ if eq (env "OS") "Darwin" }}
+[credential]
+    helper = osxkeychain
+{{ else if eq (env "OS") "Linux" }}
+[credential]
+    helper = cache --timeout=3600
+{{ end }}
+
+[alias]
+    st = status
+    ci = commit
+    co = checkout
+    br = branch
+    unstage = reset HEAD --
+    last = log -1 HEAD
+    visual = !gitk
+
+[color]
+    ui = auto
+
+[push]
+    default = simple 

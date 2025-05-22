@@ -1,0 +1,133 @@
+# dotter configuration for the example dotfiles repository
+# This file should be placed in your actual dotfiles repository,
+# and then symlinked to ~/.config/dotter/config.toml
+
+dotfiles_repo_path = "." # Relative to this config file's location
+
+# Template variables (can be overridden or expanded)
+[template_variables]
+  name = "Example User"
+  email = "user@example.com"
+  signing_key = "YOUR_GPG_SIGNING_KEY" # Replace with your GPG key if you use it
+  editor = "nvim"
+  shell_theme = "catppuccin-mocha" # Example, for tools that support themes
+
+# --- Dotfile Definitions ---
+
+[dotfiles.bashrc]
+  source = "bash/.bashrc"
+  target = "~/.bashrc"
+  is_template = true # Process with Go templating
+
+[dotfiles.zshrc]
+  source = "zsh/.zshrc"
+  target = "~/.zshrc"
+  is_template = true # Process with Go templating
+
+[dotfiles.nvim_config]
+  source = "nvim/init.vim"
+  target = "~/.config/nvim/init.vim"
+
+[dotfiles.gitconfig]
+  source = "git/.gitconfig.tmpl" # Note .tmpl extension, indicating it's a template
+  target = "~/.gitconfig"
+  is_template = true
+
+[dotfiles.gitignore_global]
+  source = "git/.gitignore_global"
+  target = "~/.gitignore_global"
+
+[dotfiles.tmux_conf]
+  source = "tmux/.tmux.conf"
+  target = "~/.tmux.conf"
+  is_template = true
+
+[dotfiles.starship_config]
+  source = "starship/starship.toml"
+  target = "~/.config/starship.toml"
+
+[dotfiles.alacritty_config]
+  source = "alacritty/alacritty.yml"
+  target = "~/.config/alacritty/alacritty.yml"
+  is_template = true
+
+
+# --- Shell Configuration ---
+[shell]
+  # Aliases will be generated into a sourced script
+  [shell.aliases]
+    ls = "lsd --color=auto" # Assumes lsd is installed
+    ll = "lsd -l --color=auto"
+    la = "lsd -a --color=auto"
+    lla = "lsd -la --color=auto"
+    cat = "bat --paging=never" # Assumes bat is installed
+    vim = "nvim"
+    g = "git"
+    k = "kubectl"
+    dk = "docker"
+    dc = "docker compose"
+    tf = "terraform"
+
+  # Functions will be generated into a sourced script
+  [shell.functions.mkcd] # Create a directory and cd into it
+    body = '''
+      mkdir -p "$1" && cd "$1"
+    '''
+
+  [shell.functions.backup] # Simple backup function
+    body = '''
+      cp "$1" "$1.bak_$(date +%Y-%m-%d_%H-%M-%S)"
+    '''
+
+# --- Tool Management ---
+# dotter can check if tools are installed and provide hints.
+# It does not install them automatically.
+[[tools]]
+  name = "Neovim (nvim)"
+  check_command = "command -v nvim"
+  install_hint = "Install Neovim from https://neovim.io/"
+
+[[tools]]
+  name = "Starship Prompt"
+  check_command = "command -v starship"
+  install_hint = "Install Starship from https://starship.rs/"
+
+[[tools]]
+  name = "lsd (LSDeluxe)"
+  check_command = "command -v lsd"
+  install_hint = "Install lsd from https://github.com/Peltoche/lsd"
+
+[[tools]]
+  name = "bat (Bat's Cat)"
+  check_command = "command -v bat"
+  install_hint = "Install bat from https://github.com/sharkdp/bat"
+
+[[tools]]
+  name = "zoxide (Smart cd)"
+  check_command = "command -v zoxide"
+  install_hint = "Install zoxide from https://github.com/ajeetdsouza/zoxide"
+
+[[tools]]
+  name = "fzf (CLI Fuzzy Finder)"
+  check_command = "command -v fzf"
+  install_hint = "Install fzf from https://github.com/junegunn/fzf"
+
+
+# --- Hooks ---
+# Example hooks (create these scripts in your dotfiles repo if you use them)
+# [hooks]
+#   pre_apply = [
+#     "echo 'Running pre-apply hooks...'",
+#     "bash ./scripts/backup_old_configs.sh"
+#   ]
+#   post_apply = [
+#     "echo 'Running post-apply hooks...'",
+#     "bash ./scripts/source_files.sh"
+#   ]
+
+#   [hooks.pre_link]
+#     nvim_config = ["mkdir -p ~/.config/nvim/undo"]
+
+#   [hooks.post_link]
+#     bashrc = ["echo 'Bashrc linked! Please re-source or open a new terminal.'"]
+#     zshrc = ["echo 'Zshrc linked! Please re-source or open a new terminal.'"] 

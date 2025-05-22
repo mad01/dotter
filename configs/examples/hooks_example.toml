@@ -1,0 +1,58 @@
+# Example dotter configuration with hooks
+dotfiles_repo_path = "~/dotfiles"
+
+# Example dotfiles
+[dotfiles.bashrc]
+source = "bash/.bashrc"
+target = "~/.bashrc"
+
+[dotfiles.vimrc]
+source = "vim/.vimrc"
+target = "~/.vimrc"
+is_template = true
+
+# Hooks examples
+[hooks]
+# Hooks to run before any dotfiles are processed
+pre_apply = [
+  "echo 'Starting dotfile application process'",
+  "~/dotfiles/scripts/backup-dotfiles.sh",
+]
+
+# Hooks to run after all dotfiles are processed
+post_apply = [
+  "echo 'All dotfiles have been processed'",
+  "~/dotfiles/scripts/notify-completion.sh",
+]
+
+# Hooks to run before specific dotfiles are linked
+[hooks.pre_link]
+# Before linking .vimrc
+vimrc = [
+  "mkdir -p ~/.vim/backup",
+  "mkdir -p ~/.vim/undo",
+]
+
+# Hooks to run after specific dotfiles are linked
+[hooks.post_link]
+# After linking .bashrc
+bashrc = [
+  "source ~/.bashrc",
+  "~/dotfiles/scripts/post-bashrc-setup.sh",
+]
+
+# Example tools
+[[tools]]
+name = "fzf"
+check_command = "command -v fzf"
+install_hint = "Install fzf with: git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf && ~/.fzf/install"
+
+# Shell configurations
+[shell.aliases]
+ll = "ls -alh"
+la = "ls -A"
+
+[shell.functions.weather]
+body = '''
+curl -s "wttr.in/$1?format=3"
+''' 
