@@ -1,0 +1,10 @@
+dotfiles_repo_path = "/home/testuser/dotfiles_src" # This will be the path inside the container
+
+[dotfiles.test_bashrc] # Named table for the map key
+  source = ".test_bashrc"
+  target = "/home/testuser/.actual_bashrc" # Target inside the container
+
+[dotfiles.test_vimrc]  # Named table for the map key
+  source = ".test_vimrc"
+  target = "/home/testuser/.actual_vimrc"
+  is_template = false 

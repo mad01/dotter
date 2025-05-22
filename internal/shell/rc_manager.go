@@ -246,9 +246,15 @@ func AutoDetectShell() SupportedShell {
 	}
 }
 
-// GetDotterGeneratedDir returns the directory path where dotter stores its generated scripts.
-// e.g. ~/.config/dotter/generated
-func GetDotterGeneratedDir() (string, error) {
+var (
+	// GetDotterGeneratedDir defines the function to get the dotter generated scripts directory.
+	// This is a variable to allow for easier testing.
+	GetDotterGeneratedDir = getDotterGeneratedDirInternal
+)
+
+// getDotterGeneratedDirInternal returns the directory path where dotter stores its generated scripts.
+// e.g. ~/.config/dotter/generated or $XDG_CONFIG_HOME/dotter/generated
+func getDotterGeneratedDirInternal() (string, error) {
 	configHome := os.Getenv("XDG_CONFIG_HOME")
 	if configHome == "" {
 		homeDir, err := os.UserHomeDir()
