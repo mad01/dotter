@@ -86,11 +86,12 @@ func TestScanner(t *testing.T) {
 
 func TestError(t *testing.T) {
 	restoreStderr, getStderrOutput := captureStderr(t)
-	defer restoreStderr()
 
 	testError := fmt.Errorf("this is a test error")
 	Error(testError)
 
+	// Close the pipe before reading from it to ensure EOF
+	restoreStderr()
 	output := getStderrOutput()
 	expectedOutput := "Error: this is a test error\n"
 	if output != expectedOutput {
@@ -100,8 +101,9 @@ func TestError(t *testing.T) {
 	// Test with nil error
 	restoreStderrNil, getStderrOutputNil := captureStderr(t) // Need new capture as previous reader is closed
 	Error(nil)
-	outputNil := getStderrOutputNil()
+	// Explicitly close pipe before reading
 	restoreStderrNil()
+	outputNil := getStderrOutputNil()
 	if outputNil != "" {
 		t.Errorf("Error(nil) produced output: %q, want empty string", outputNil)
 	}
@@ -109,10 +111,11 @@ func TestError(t *testing.T) {
 
 func TestErrorf(t *testing.T) {
 	restoreStderr, getStderrOutput := captureStderr(t)
-	defer restoreStderr()
 
 	Errorf("formatted error with value %d and string %s", 123, "test")
 
+	// Close the pipe before reading from it to ensure EOF
+	restoreStderr()
 	output := getStderrOutput()
 	expectedOutput := "Error: formatted error with value 123 and string test\n"
 	if output != expectedOutput {

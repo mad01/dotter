@@ -1,7 +1,7 @@
 BINARY_NAME=dotter
 CMD_PATH=./cmd/dotter
 
-.PHONY: all build test lint format clean
+.PHONY: all build test test-integration lint format clean
 
 all: build
 
@@ -11,8 +11,12 @@ build:
 	@echo "$(BINARY_NAME) built successfully."
 
 test:
-	@echo "Running tests..."
-	@go test ./... -v
+	@echo "Running tests with 30s timeout..."
+	@go test ./... -v -timeout 30s
+
+test-integration:
+	@echo "Running integration tests..."
+	@./tests/integration/test_apply_basic/run_test.sh
 
 lint:
 	@echo "Running linter (golangci-lint)..."
@@ -38,6 +42,7 @@ help:
 	@echo "  all         - Build the binary (default)"
 	@echo "  build       - Build the binary"
 	@echo "  test        - Run unit tests"
+	@echo "  test-integration - Run Docker-based integration tests"
 	@echo "  lint        - Run golangci-lint (requires it to be installed)"
 	@echo "  format      - Format code using goimports and gofmt"
 	@echo "  clean       - Remove built binary and clean Go cache"

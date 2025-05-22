@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/mad01/dotter/internal/config"
@@ -42,10 +43,20 @@ func GenerateShellConfigs(cfg *config.Config, shellType SupportedShell, dryRun b
 		var aliasContent strings.Builder
 		aliasContent.WriteString("#!/bin/sh\n")
 		aliasContent.WriteString("# Dotter generated aliases - DO NOT EDIT MANUALLY\n\n")
-		for name, command := range cfg.Shell.Aliases {
+
+		// Sort alias names for consistent output
+		aliasNames := make([]string, 0, len(cfg.Shell.Aliases))
+		for name := range cfg.Shell.Aliases {
+			aliasNames = append(aliasNames, name)
+		}
+		sort.Strings(aliasNames)
+
+		for _, name := range aliasNames { // Iterate over sorted names
+			command := cfg.Shell.Aliases[name]
 			// Basic sanitization for alias name and command could be added here if necessary
 			aliasContent.WriteString(fmt.Sprintf("alias %s='%s'\n", name, strings.ReplaceAll(command, "'", "'\\''")))
 		}
+
 		if dryRun {
 			fmt.Printf("[DRY RUN] Would write generated aliases to: %s\n", aliasFilePath)
 		} else {
@@ -70,7 +81,16 @@ func GenerateShellConfigs(cfg *config.Config, shellType SupportedShell, dryRun b
 		var funcContent strings.Builder
 		funcContent.WriteString("#!/bin/sh\n") // Or make this dependent on shellType for more complex functions
 		funcContent.WriteString("# Dotter generated functions - DO NOT EDIT MANUALLY\n\n")
-		for name, function := range cfg.Shell.Functions {
+
+		// Sort function names for consistent output
+		funcNames := make([]string, 0, len(cfg.Shell.Functions))
+		for name := range cfg.Shell.Functions {
+			funcNames = append(funcNames, name)
+		}
+		sort.Strings(funcNames)
+
+		for _, name := range funcNames { // Iterate over sorted names
+			function := cfg.Shell.Functions[name]
 			// For POSIX shells, function syntax is: func_name() { body }
 			// Fish shell syntax is different: function func_name; body; end;
 			// For now, sticking to POSIX sh compatible.
@@ -80,6 +100,7 @@ func GenerateShellConfigs(cfg *config.Config, shellType SupportedShell, dryRun b
 				funcContent.WriteString(fmt.Sprintf("%s() {\n%s\n}\n\n", name, strings.TrimSpace(function.Body)))
 			}
 		}
+
 		if dryRun {
 			fmt.Printf("[DRY RUN] Would write generated functions to: %s\n", funcFilePath)
 		} else {

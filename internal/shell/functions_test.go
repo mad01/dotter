@@ -93,7 +93,6 @@ func TestGenerateShellConfigs_ActualWrite_Bash(t *testing.T) {
 	generatedDirForTest := filepath.Join(tempDir, "dotter_generated_actual_bash")
 	GetDotterGeneratedDir = func() (string, error) { return generatedDirForTest, nil }
 	defer func() { GetDotterGeneratedDir = originalGetDotterGeneratedDir }()
-	// defer os.RemoveAll(generatedDirForTest) // t.TempDir() handles this
 
 	aliasPath, funcPath, err := GenerateShellConfigs(cfg, Bash, false)
 	if err != nil {
@@ -102,14 +101,33 @@ func TestGenerateShellConfigs_ActualWrite_Bash(t *testing.T) {
 
 	// Verify alias file content
 	aliasContent, _ := os.ReadFile(aliasPath)
-	expectedAliasContentBash := "#!/bin/sh\n# Dotter generated aliases - DO NOT EDIT MANUALLY\n\nalias ll='ls -alh'\nalias gcm='git checkout master'\n"
+	// Expected aliases sorted alphabetically: gcm, ll
+	expectedAliasContentBash := `#!/bin/sh
+# Dotter generated aliases - DO NOT EDIT MANUALLY
+
+alias gcm='git checkout master'
+alias ll='ls -alh'
+`
 	if string(aliasContent) != expectedAliasContentBash {
 		t.Errorf("Bash alias file content mismatch.\nGot:\n%s\nWant:\n%s", string(aliasContent), expectedAliasContentBash)
 	}
 
 	// Verify function file content (Bash/POSIX)
 	funcContent, _ := os.ReadFile(funcPath)
-	expectedFuncContentBash := "#!/bin/sh\n# Dotter generated functions - DO NOT EDIT MANUALLY\n\nmyfunc() {\necho \"Hello from myfunc $1\"\n}\n\nanother() {\necho \"Another one bites the $DUST\"\nls\n}\n\n"
+	// Expected functions sorted alphabetically: another, myfunc
+	expectedFuncContentBash := `#!/bin/sh
+# Dotter generated functions - DO NOT EDIT MANUALLY
+
+another() {
+echo "Another one bites the $DUST"
+ls
+}
+
+myfunc() {
+echo "Hello from myfunc $1"
+}
+
+`
 	if string(funcContent) != expectedFuncContentBash {
 		t.Errorf("Bash function file content mismatch.\nGot:\n%s\nWant:\n%s", string(funcContent), expectedFuncContentBash)
 	}
@@ -131,14 +149,33 @@ func TestGenerateShellConfigs_ActualWrite_Fish(t *testing.T) {
 
 	// Alias content should be the same for Fish as it's sourced by sh-compatible `alias`
 	aliasContent, _ := os.ReadFile(aliasPath)
-	expectedAliasContentFish := "#!/bin/sh\n# Dotter generated aliases - DO NOT EDIT MANUALLY\n\nalias ll='ls -alh'\nalias gcm='git checkout master'\n"
+	// Expected aliases sorted alphabetically: gcm, ll
+	expectedAliasContentFish := `#!/bin/sh
+# Dotter generated aliases - DO NOT EDIT MANUALLY
+
+alias gcm='git checkout master'
+alias ll='ls -alh'
+`
 	if string(aliasContent) != expectedAliasContentFish {
 		t.Errorf("Fish alias file content mismatch.\nGot:\n%s\nWant:\n%s", string(aliasContent), expectedAliasContentFish)
 	}
 
 	// Verify function file content (Fish)
 	funcContent, _ := os.ReadFile(funcPath)
-	expectedFuncContentFish := "#!/bin/sh\n# Dotter generated functions - DO NOT EDIT MANUALLY\n\nfunction myfunc\n  echo \"Hello from myfunc $1\"\nend\n\nfunction another\n  echo \"Another one bites the $DUST\"\nls\nend\n\n"
+	// Expected functions sorted alphabetically: another, myfunc
+	expectedFuncContentFish := `#!/bin/sh
+# Dotter generated functions - DO NOT EDIT MANUALLY
+
+function another
+  echo "Another one bites the $DUST"
+ls
+end
+
+function myfunc
+  echo "Hello from myfunc $1"
+end
+
+`
 	if string(funcContent) != expectedFuncContentFish {
 		t.Errorf("Fish function file content mismatch.\nGot:\n%s\nWant:\n%s", string(funcContent), expectedFuncContentFish)
 	}
