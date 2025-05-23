@@ -1,0 +1,152 @@
+# .goreleaser.yml
+# Build configuration for GoReleaser
+# This file is managed by dotter (conceptually, though it's for dotter itself)
+
+project_name: dotter
+
+# Path to the main Go package for the binary
+# This is relative to the project root.
+builds:
+  - id: dotter
+    binary: dotter
+    # Main package location
+    main: ./cmd/dotter/
+    # Goos and Goarch to build for
+    goos:
+      - linux
+      - darwin # macOS
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    # Optional: Goarm for arm architectures (e.g., '6', '7')
+    # goarm:
+    #   - '6'
+    # Environment variables for the build
+    env:
+      - CGO_ENABLED=0
+    # ldflags to set version information (optional but recommended)
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.builtBy=goreleaser
+
+# Archives to create (e.g., .tar.gz, .zip)
+archives:
+  - id: dotter-archives
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+    format: tar.gz
+    # Optional: if you want to include other files like README, LICENSE
+    files:
+      - LICENSE
+      - README.md
+    # For Windows, often .zip is preferred
+    format_overrides:
+      - goos: windows
+        format: zip
+
+# Checksum generation for the archives
+checksum:
+  name_template: '{{ .ProjectName }}_{{ .Version }}_checksums.txt'
+
+# Snapshot releases (for pre-releases / builds from main branch)
+# These won't be published to GitHub Releases as "latest" but can be useful
+snapshot:
+  name_template: "{{ .Tag }}-next"
+
+# Changelog generation (from Git commit messages)
+changelog:
+  sort: asc
+  filters:
+    # Exclude certain commit types from the changelog (e.g., chore, docs, test)
+    exclude:
+      - '(?i)^chore(.*)'
+      - '(?i)^docs(.*)'
+      - '(?i)^test(.*)'
+      - '(?i)^refactor(.*)'
+      - '(?i)^build(.*)'
+      - Merge pull request
+      - Merge branch
+
+# GitHub Releases configuration
+# release:
+  # github:
+    # owner: your_github_username_or_org # Replace with your GitHub username/org
+    # name: dotter                       # Name of the repository
+  # prerelease: auto # Mark as pre-release if version is like v1.0.0-rc1
+  # draft: false       # Set to true to create drafts instead of publishing directly
+  # name_template: "{{.Tag}}"
+
+# Optional: Homebrew Tap
+# brews:
+#   - name: dotter
+#     tap:
+#       owner: your_github_username_or_org
+#       name: homebrew-tap # Name of your Homebrew tap repository
+#     commit_author:
+#       name: goreleaserbot
+#       email: bot@goreleaser.com
+#     homepage: "https://github.com/your_github_username_or_org/dotter"
+#     description: "Dotfile manager and shell utility by dotter."
+#     license: "MIT" # Or your chosen license
+#     # Optional: specify dependencies or conflicts
+#     # dependencies:
+#     #   - name: git
+#     #   - name: zsh
+#     #     type: optional
+#     # test: |
+#     #   system "#{bin}/dotter --version"
+#     # Caveats can be added here if needed.
+
+# Optional: Scoop manifest (for Windows users)
+# scoop:
+#   bucket:
+#     owner: your_github_username_or_org
+#     name: scoop-bucket
+#   commit_author:
+#     name: goreleaserbot
+#     email: bot@goreleaser.com
+#   homepage: "https://github.com/your_github_username_or_org/dotter"
+#   description: "Dotfile manager and shell utility by dotter."
+#   license: "MIT"
+
+# Before hook can be used to run commands before the build process
+# e.g., generate man pages or other assets
+# before:
+#   hooks:
+#     - go mod tidy
+#     - go generate ./...
+
+# nfpm packages (for .deb, .rpm - more advanced)
+# This is a placeholder, requires more setup if you want Linux packages
+# nfpm:
+#   - id: dotter-nfpm
+#     package_name: dotter
+#     file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+#     homepage: "https://github.com/your_github_username_or_org/dotter"
+#     maintainer: "Your Name <your.email@example.com>"
+#     description: "Dotfile manager and shell utility by dotter."
+#     license: "MIT"
+#     formats:
+#       - deb
+#       - rpm
+#     bindir: /usr/local/bin # Where to install the binary
+    # contents:
+    #   - src: ./LICENSE
+    #     dst: /usr/share/doc/dotter/copyright
+    #   - src: ./README.md
+    #     dst: /usr/share/doc/dotter/README.md
+
+# Docker images (Optional)
+# docker:
+#   - kebijakan_image_template: "your_docker_hub_user/dotter:{{ .Tag }}"
+#     dockerfile: Dockerfile # Assumes your main Dockerfile is for the release
+#     build_flag_templates:
+#       - "--label=org.opencontainers.image.created={{.Date}}"
+#       - "--label=org.opencontainers.image.name={{.ProjectName}}"
+#       - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+#       - "--label=org.opencontainers.image.version={{.Version}}"
+#       - "--label=org.opencontainers.image.source={{.GitURL}}"
+
+# Signs can be used to sign artifacts with GPG or other tools
+# signs:
+#   - artifacts: checksum
+#     args: ["--batch", "--local-user", "YOUR_GPG_KEY_ID", "--output", "${signature}", "--detach-sign", "${artifact}"] 

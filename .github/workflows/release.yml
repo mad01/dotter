@@ -1,0 +1,52 @@
+# .github/workflows/release.yml
+
+name: Release dotter
+
+# This workflow is triggered on pushes to tags that look like versions (e.g., v1.0.0, v0.5.2-alpha)
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write # Needed to create releases and upload artifacts
+  # id-token: write # Needed for some advanced OIDC features, not strictly for basic GoReleaser
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetches all history so GoReleaser can make a changelog
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22' # Specify your Go version, ensure it matches your go.mod
+
+      - name: Set up QEMU (for multi-arch builds, if needed by GoReleaser for certain targets)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v5 # Use the latest stable version
+        with:
+          # The version of GoReleaser to use. 'latest' is usually fine.
+          version: latest
+          # Arguments to pass to GoReleaser. 'release --clean' is common.
+          # --clean removes the dist directory before building.
+          args: release --clean
+        env:
+          # GITHUB_TOKEN is automatically provided by Actions
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Optional: If you sign your releases with GPG
+          # GPG_FINGERPRINT: ${{ secrets.GPG_FINGERPRINT }} # Store your GPG key fingerprint as a secret
+          # GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}   # Store your GPG passphrase as a secret
+
+      # Optional: Upload build artifacts (useful for debugging or if you want to store them separately)
+      # - name: Upload Release Artifacts (from dist folder)
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: dotter-release-artifacts
+      #     path: dist/* 
