@@ -1,5 +1,7 @@
 # dotter 🚀
 
+just for fun to play with dotfiles 
+
 **dotter** is a command-line interface (CLI) tool, written in Go, for managing your dotfiles, shell configurations (aliases, functions), and ensuring your favorite shell tools are set up correctly. It's inspired by tools like Starship and aims to provide a declarative way to manage your shell environment through a simple TOML configuration file.
 
 ## Philosophy
